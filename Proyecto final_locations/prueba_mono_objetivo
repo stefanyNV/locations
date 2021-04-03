@@ -1,0 +1,1109 @@
+{
+  "nbformat": 4,
+  "nbformat_minor": 0,
+  "metadata": {
+    "colab": {
+      "name": "TrabajoFinal_Idea2_mono_objetivo_685339.ipynb",
+      "provenance": [],
+      "collapsed_sections": [
+        "PuScmwjyk-In",
+        "9IhMfqBDk-It",
+        "s-CL1YssYbD3",
+        "DzeuHBHJYbD3",
+        "KYi2oQPtYbD4",
+        "e8CZqrC4k-Ix"
+      ],
+      "toc_visible": true
+    },
+    "kernelspec": {
+      "display_name": "Python 3",
+      "language": "python",
+      "name": "python3"
+    },
+    "language_info": {
+      "codemirror_mode": {
+        "name": "ipython",
+        "version": 3
+      },
+      "file_extension": ".py",
+      "mimetype": "text/x-python",
+      "name": "python",
+      "nbconvert_exporter": "python",
+      "pygments_lexer": "ipython3",
+      "version": "3.8.3"
+    }
+  },
+  "cells": [
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "dnJCLCtuk-IR"
+      },
+      "source": [
+        "## Algoritmo Genetico para solucionar localización óptima de supermercados"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "H4atcpFJAuK2",
+        "outputId": "4aca2f9a-9790-481a-9138-20cfa3383fc7"
+      },
+      "source": [
+        "from google.colab import drive \n",
+        "drive.mount('/content/drive/', force_remount=True)"
+      ],
+      "execution_count": 147,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "text": [
+            "Mounted at /content/drive/\n"
+          ],
+          "name": "stdout"
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "GMioG_KnYbD0"
+      },
+      "source": [
+        "### Define el objeto Item para supermercados\n",
+        "Un objeto de clase Item almacena la latitud, longitud y poblacion del item "
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "i0ESg2MwYbD0"
+      },
+      "source": [
+        "class Item(object):\n",
+        "    def __init__(self, latitud, longitud, poblacion500m):\n",
+        "        self.latitud  = latitud                                     # latitud del supermercado. La suma de la distancia entre los supermercados se quiere maximizar\n",
+        "        self.longitud = longitud                                     # longitud del supermercado. La suma de la distancia entre los supermercados se quiere maximizar\n",
+        "        self.poblacion500m = poblacion500m                            # poblacion500m del supermercado. La suma de la población de los supermercados se quiere maximizar"
+      ],
+      "execution_count": 148,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "1HqRbcMRYbDz"
+      },
+      "source": [
+        "### Datos para el Item"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "c1oMO87WYbD0"
+      },
+      "source": [
+        "import sys\n",
+        "import time\n",
+        "import numpy as np\n",
+        "import pandas as pd\n",
+        "import random\n",
+        "from copy import deepcopy\n",
+        "import matplotlib.pyplot as plt"
+      ],
+      "execution_count": 149,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 194
+        },
+        "id": "Av6GbU5sAu3H",
+        "outputId": "7556d9bd-81c1-4356-9757-789925946189"
+      },
+      "source": [
+        "candidatos = pd.read_excel('/content/drive/MyDrive/Colab Notebooks/DiplomadoIA/M3_optimizacion/TrabajoFinal/Candidatos_supermercados.xlsx')\n",
+        "candidatos.head(5)"
+      ],
+      "execution_count": 150,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/html": [
+              "<div>\n",
+              "<style scoped>\n",
+              "    .dataframe tbody tr th:only-of-type {\n",
+              "        vertical-align: middle;\n",
+              "    }\n",
+              "\n",
+              "    .dataframe tbody tr th {\n",
+              "        vertical-align: top;\n",
+              "    }\n",
+              "\n",
+              "    .dataframe thead th {\n",
+              "        text-align: right;\n",
+              "    }\n",
+              "</style>\n",
+              "<table border=\"1\" class=\"dataframe\">\n",
+              "  <thead>\n",
+              "    <tr style=\"text-align: right;\">\n",
+              "      <th></th>\n",
+              "      <th>ID</th>\n",
+              "      <th>Descripcion</th>\n",
+              "      <th>Latitud</th>\n",
+              "      <th>Longitud</th>\n",
+              "      <th>Poblacion500m</th>\n",
+              "    </tr>\n",
+              "  </thead>\n",
+              "  <tbody>\n",
+              "    <tr>\n",
+              "      <th>0</th>\n",
+              "      <td>Punto 1</td>\n",
+              "      <td>Esq. Benavides con Nicolas Dueñas</td>\n",
+              "      <td>-12.04861</td>\n",
+              "      <td>-77.06496</td>\n",
+              "      <td>16500</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>1</th>\n",
+              "      <td>Ponto 2</td>\n",
+              "      <td>Sta Bernardita con Republica de Venezuela</td>\n",
+              "      <td>-12.05956</td>\n",
+              "      <td>-77.07583</td>\n",
+              "      <td>18000</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>2</th>\n",
+              "      <td>Ponto 3</td>\n",
+              "      <td>Santa Susana con Santa Gertrudis</td>\n",
+              "      <td>-12.06524</td>\n",
+              "      <td>-77.07334</td>\n",
+              "      <td>17000</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>3</th>\n",
+              "      <td>Ponto 4</td>\n",
+              "      <td>Belizario Sosa Pelaez</td>\n",
+              "      <td>-12.05998</td>\n",
+              "      <td>-77.06300</td>\n",
+              "      <td>15000</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>4</th>\n",
+              "      <td>Ponto 5</td>\n",
+              "      <td>Esq. Aurelio Garcia y Miranono Arredondo</td>\n",
+              "      <td>-12.05541</td>\n",
+              "      <td>-77.07497</td>\n",
+              "      <td>17100</td>\n",
+              "    </tr>\n",
+              "  </tbody>\n",
+              "</table>\n",
+              "</div>"
+            ],
+            "text/plain": [
+              "        ID                                Descripcion  ...  Longitud  Poblacion500m\n",
+              "0  Punto 1          Esq. Benavides con Nicolas Dueñas  ... -77.06496          16500\n",
+              "1  Ponto 2  Sta Bernardita con Republica de Venezuela  ... -77.07583          18000\n",
+              "2  Ponto 3           Santa Susana con Santa Gertrudis  ... -77.07334          17000\n",
+              "3  Ponto 4                      Belizario Sosa Pelaez  ... -77.06300          15000\n",
+              "4  Ponto 5   Esq. Aurelio Garcia y Miranono Arredondo  ... -77.07497          17100\n",
+              "\n",
+              "[5 rows x 5 columns]"
+            ]
+          },
+          "metadata": {
+            "tags": []
+          },
+          "execution_count": 150
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "NpoYzdXIB_uc"
+      },
+      "source": [
+        "ItemPool = [ Item(candidatos.Latitud[x], candidatos.Longitud[x], candidatos.Poblacion500m[x]) for x in range (0,candidatos.shape[0])]"
+      ],
+      "execution_count": 151,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "TIgP9ZLfCtoY",
+        "outputId": "18c40676-4393-4a51-b91e-b8fa9efd5d2b"
+      },
+      "source": [
+        "ItemPool[1].latitud"
+      ],
+      "execution_count": 152,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "-12.05956"
+            ]
+          },
+          "metadata": {
+            "tags": []
+          },
+          "execution_count": 152
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "teOgNitqNrHZ",
+        "outputId": "9d10e397-6762-4bde-f6ae-46a2b695726f"
+      },
+      "source": [
+        "ItemPool[15].latitud"
+      ],
+      "execution_count": 153,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "-12.04817"
+            ]
+          },
+          "metadata": {
+            "tags": []
+          },
+          "execution_count": 153
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "MnVcuNVdk-IS"
+      },
+      "source": [
+        "### Define la estructura de un individuo en el AG con sus operadores genéticos \n"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "JjbNgyCdk-IU"
+      },
+      "source": [
+        "class Individual:\n",
+        "\n",
+        "    def __init__(self, chromosome):  # el constructor recibe un cromosoma\n",
+        "        self.chromosome = chromosome[:]  \n",
+        "        self.fitness = -1  # -1 indica que el individuo no ha sido evaluado\n",
+        "\n",
+        "    # def crossover_onepoint(self, other):\n",
+        "    #     \"Retorna dos nuevos individuos del cruzamiento de un punto entre individuos self y other \"\n",
+        "    #     c = random.randrange(len(self.chromosome))\n",
+        "    #     ind1 = Individual(self.chromosome[:c] + other.chromosome[c:])\n",
+        "    #     ind2 = Individual(other.chromosome[:c] + self.chromosome[c:])\n",
+        "    #     return [ind1, ind2]   \n",
+        "    \n",
+        "\n",
+        "    def crossover_uniform(self, other):\n",
+        "        chromosome1 = []\n",
+        "        chromosome2 = []\n",
+        "        \"Retorna dos nuevos individuos del cruzamiento uniforme entre self y other \"\n",
+        "        for i in range(len(self.chromosome)):\n",
+        "            if random.uniform(0, 1) < 0.5:\n",
+        "                chromosome1.append(self.chromosome[i])\n",
+        "                chromosome2.append(other.chromosome[i])\n",
+        "            else:\n",
+        "                chromosome1.append(other.chromosome[i])\n",
+        "                chromosome2.append(self.chromosome[i])\n",
+        "        ind1 = Individual(chromosome1)\n",
+        "        ind2 = Individual(chromosome2)\n",
+        "        return [ind1, ind2] \n",
+        "        \n",
+        "\n",
+        "\n",
+        "    # def crossover_uniform(self, other):\n",
+        "    #     i = 0\n",
+        "    #     j = 0\n",
+        "\n",
+        "    #     # Genes activos en self\n",
+        "    #     genesSelec_self = []\n",
+        "    #     i = 0\n",
+        "    #     for i in range(len(self.chromosome)):\n",
+        "    #       if self.chromosome[i] == 1 : \n",
+        "    #         genesSelec_self.append(i)\n",
+        "        \n",
+        "    #     # Genes activos en other\n",
+        "    #     genesSelec_other = []\n",
+        "    #     i = 0\n",
+        "    #     for i in range(len(other.chromosome)):\n",
+        "    #       if other.chromosome[i] == 1 : \n",
+        "    #         genesSelec_other.append(i)\n",
+        "        \n",
+        "    #     son_self = []\n",
+        "    #     son_other = []\n",
+        "    #     i = 0\n",
+        "    #     for i in range(10): \n",
+        "\n",
+        "    #       if random.uniform(0, 1) < 0.5 :\n",
+        "\n",
+        "\n",
+        "\n",
+        "    #         if genesSelec_self[i] not in son_self :\n",
+        "    #           son_self.append(genesSelec_self[i])\n",
+        "    #         else :\n",
+        "    #           son_self.append( np.random.choice([x for x in  list(range(len(self.chromosome))) if x not in genesSelec_self ], 1, False) )\n",
+        "            \n",
+        "    #         if genesSelec_other[i] not in son_other :\n",
+        "    #           son_other.append(genesSelec_other[i])\n",
+        "    #         else :\n",
+        "    #           son_other.append( np.random.choice([x for x in  list(range(len(other.chromosome))) if x not in genesSelec_other ], 1, False) )\n",
+        "\n",
+        "\n",
+        "    #       else :\n",
+        "    #         if genesSelec_other[i] not in son_self :\n",
+        "    #           son_self.append(genesSelec_other[i])\n",
+        "    #         else : \n",
+        "    #           son_self.append( np.random.choice([x for x in  list(range(len(self.chromosome))) if x not in genesSelec_self ], 1, False) )\n",
+        "            \n",
+        "    #         if genesSelec_self[i] not in son_other :\n",
+        "    #           son_other.append(genesSelec_self[i])\n",
+        "    #         else : \n",
+        "    #           son_other.append( np.random.choice([x for x in  list(range(len(other.chromosome))) if x not in genesSelec_other ], 1, False) )\n",
+        "\n",
+        "\n",
+        "    #     \"Retorna dos nuevos individuos del cruzamiento entre self y other, solo entre los genes que son 1 \"\n",
+        "    #     i = 0\n",
+        "    #     chromosome1 = [0 for j in range( len(self.chromosome))] \n",
+        "    #     chromosome2 = [0 for j in range( len(other.chromosome))] \n",
+        "    #     for i in range(len(son_self)): \n",
+        "    #       chromosome1[int(son_self[i])] = 1\n",
+        "    #       chromosome2[int(son_other[i])] = 1\n",
+        "    #     ind1 = Individual(chromosome1)\n",
+        "    #     ind2 = Individual(chromosome2)\n",
+        "    #     return [ind1, ind2] \n",
+        "\n",
+        "\n",
+        "    def mutation_flip(self):\n",
+        "        \"Cambia el alelo de 2 genes escogidos aleatoriamente.\"\n",
+        "        new_chromosome = deepcopy(self.chromosome)\n",
+        "        mutGene = random.randrange(0,len(new_chromosome))   # escoge un gen para mutar\n",
+        "        if new_chromosome[mutGene] == 0:\n",
+        "            new_chromosome[mutGene] = 1\n",
+        "        else:\n",
+        "            new_chromosome[mutGene] = 0\n",
+        "        return Individual(new_chromosome)\n",
+        "    \n",
+        "    def mutation_multiflip(self):\n",
+        "        \"\"\"\n",
+        "        Cambia los alelos de un conjunto de genes escogidos aleatoriamente (hasta un maximo de 50% de genes).\n",
+        "        \"\"\"\n",
+        "        new_chromosome = deepcopy(self.chromosome)\n",
+        "        cantidadGenes = int(0.5*len(new_chromosome))                  \n",
+        "        genesSeleccionados = np.random.choice(new_chromosome, cantidadGenes, False)\n",
+        "        for gen in genesSeleccionados:\n",
+        "          if new_chromosome[gen] == 0:\n",
+        "            new_chromosome[gen] = 1\n",
+        "          else:\n",
+        "            new_chromosome[gen] = 0\n",
+        "        return Individual(new_chromosome)\n"
+      ],
+      "execution_count": 154,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "dlfuzSNMor-H"
+      },
+      "source": [
+        "# self = [0,1,0,1,1,0,0,1,1,1]\n",
+        "# other = [0,1,1,1,0,1,0,0,1,1]\n",
+        "\n",
+        "\n",
+        "# chromosome1 = [0 for j in range( len(self))] \n",
+        "# chromosome2 = [0 for j in range( len(other))] \n",
+        "\n",
+        "# # Genes activos en self\n",
+        "# genesSelec_self = []\n",
+        "# i = 0\n",
+        "# for i in range(len(self)):\n",
+        "#   if self[i] == 1 : \n",
+        "#     genesSelec_self.append(i)\n",
+        "\n",
+        "# # Genes activos en other\n",
+        "# genesSelec_other = []\n",
+        "# i = 0\n",
+        "# for i in range(len(other)):\n",
+        "#   if other[i] == 1 : \n",
+        "#     genesSelec_other.append(i)\n",
+        "\n",
+        "# son_self = []\n",
+        "# son_other = []\n",
+        "# i = 0\n",
+        "# for i in range(len(genesSelec_self)): \n",
+        "\n",
+        "#   if random.uniform(0, 1) < 0.5 :\n",
+        "    \n",
+        "\n",
+        "#     if genesSelec_self[i] not in son_self :\n",
+        "#       son_self.append(genesSelec_self[i])\n",
+        "#     else :\n",
+        "#       son_self.append( np.random.choice([x for x in  list(range(len(self))) if x not in genesSelec_self ], 1, False) )\n",
+        "    \n",
+        "#     if genesSelec_other[i] not in son_other :\n",
+        "#       son_other.append(genesSelec_other[i])\n",
+        "#     else :\n",
+        "#       son_other.append( np.random.choice([x for x in  list(range(len(other))) if x not in genesSelec_other ], 1, False) )\n",
+        "\n",
+        "\n",
+        "#   else :\n",
+        "#     if genesSelec_other[i] not in son_self :\n",
+        "#       son_self.append(genesSelec_other[i])\n",
+        "#     else : \n",
+        "#       son_self.append( np.random.choice([x for x in  list(range(len(self))) if x not in genesSelec_self ], 1, False) )\n",
+        "    \n",
+        "#     if genesSelec_self[i] not in son_other :\n",
+        "#       son_other.append(genesSelec_self[i])\n",
+        "#     else : \n",
+        "#       son_other.append( np.random.choice([x for x in  list(range(len(other))) if x not in genesSelec_other ], 1, False) )\n",
+        "\n",
+        "\n",
+        "# \"Retorna dos nuevos individuos del cruzamiento entre self y other, solo entre los genes que son 1 \"\n",
+        "# i = 0\n",
+        "# for i in range(len(son_self)): \n",
+        "#   chromosome1[int(son_self[i])] = 1\n",
+        "#   chromosome2[int(son_other[i])] = 1\n",
+        "# ind1 = Individual(chromosome1)\n",
+        "# ind2 = Individual(chromosome2)\n"
+      ],
+      "execution_count": 155,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "vVlAwf5Nprx0"
+      },
+      "source": [
+        "# ind1.chromosome"
+      ],
+      "execution_count": 156,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "PuScmwjyk-In"
+      },
+      "source": [
+        "### Funcion para inicializar aleatoriamente una población de individuos"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "BhJe7IKuGk7W"
+      },
+      "source": [
+        "chromosome_size = 60\n",
+        "cantidadGenes = 10               "
+      ],
+      "execution_count": 157,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "wlz2gDhNl1MC"
+      },
+      "source": [
+        "# var1 = np.random.choice(chromosome_size, 10, False) ; var1\n",
+        "# [x for x in list(range(60)) if x not in var1 ]\n",
+        "\n",
+        "# # np.random.choice([x for x in  list(range(len(self.chromosome))) if x not in genesSelec_self ], 1, False)\n",
+        "# np.random.choice([x for x in  list(range(60)) if x not in var1 ], 1, False)"
+      ],
+      "execution_count": 158,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "swoZMGwdk-Io"
+      },
+      "source": [
+        "def init_population(popsize, chromosome_size, cantidadGenes=10):\n",
+        "\n",
+        "  population = []\n",
+        "  for i in range(popsize):     \n",
+        "\n",
+        "    new_chromosome = [0 for j in range(chromosome_size)]\n",
+        "    cantidadGenes = 10\n",
+        "    genesSeleccionados = np.random.choice(chromosome_size, 10, False)\n",
+        "\n",
+        "    for gen in genesSeleccionados:\n",
+        "          if new_chromosome[gen] == 0:\n",
+        "            new_chromosome[gen] = 1\n",
+        "          else:\n",
+        "            new_chromosome[gen] = 0\n",
+        "\n",
+        "    population.append( Individual(new_chromosome) ) \n",
+        "\n",
+        "  return population"
+      ],
+      "execution_count": 159,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "yeCBGCnjK1wF",
+        "outputId": "a589ca83-d0f9-4268-dab2-83dcfd552019"
+      },
+      "source": [
+        "len(init_population(popsize=5, chromosome_size=60, cantidadGenes=10))"
+      ],
+      "execution_count": 160,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "5"
+            ]
+          },
+          "metadata": {
+            "tags": []
+          },
+          "execution_count": 160
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "I4yiFn6wWDUb",
+        "outputId": "ef27efd7-70d5-42f0-b8e5-5435a5cae068"
+      },
+      "source": [
+        "init_population(popsize=5, chromosome_size=60, cantidadGenes=10)[4].chromosome[1]"
+      ],
+      "execution_count": 161,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "0"
+            ]
+          },
+          "metadata": {
+            "tags": []
+          },
+          "execution_count": 161
+        }
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "fJsv0S_8k-IZ"
+      },
+      "source": [
+        "### Funcion para obtener el fitness de un cromosoma"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "jxHGsDvB90w-",
+        "outputId": "9d381b33-c789-417c-d688-390f236cbfb0"
+      },
+      "source": [
+        "!pip install haversine\n",
+        "from haversine import haversine, Unit"
+      ],
+      "execution_count": 162,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "text": [
+            "Requirement already satisfied: haversine in /usr/local/lib/python3.7/dist-packages (2.3.0)\n"
+          ],
+          "name": "stdout"
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "x-OUH07tk-Ic"
+      },
+      "source": [
+        "!pip install haversine\n",
+        "from haversine import haversine, Unit\n",
+        "\n",
+        "def get_fitness(chromosome, items, max_sm):      \n",
+        "    \n",
+        "    fitness = 0 \n",
+        "    sum_dist = 0\n",
+        "    sum_pobl = 0\n",
+        "    genes1 = 0\n",
+        "\n",
+        "    for i in range(len(items)):\n",
+        "\n",
+        "        temp_Dis = 0\n",
+        "        temp_Pob = 0\n",
+        "        temp_fit = 0\n",
+        "\n",
+        "        if chromosome[i] == 1:   \n",
+        "          genes1 = genes1 + 1\n",
+        "\n",
+        "          for j in range((i+1), len(chromosome)):\n",
+        "            if chromosome[j] == 1:\n",
+        "              temp_Dis = temp_Dis + haversine((items[i].latitud, items[i].longitud), \n",
+        "                                              (items[j].latitud, items[j].longitud), Unit.KILOMETERS)*1000   \n",
+        "          sum_dist = sum_dist + temp_Dis \n",
+        "          \n",
+        "          temp_Pob = items[i].poblacion500m\n",
+        "          sum_pobl = sum_pobl + temp_Pob\n",
+        "\n",
+        "    temp_fit = sum_dist + sum_pobl\n",
+        "    fitness = fitness + temp_fit\n",
+        "    \n",
+        "    if genes1 > max_sm:\n",
+        "      return 0, 0, 0\n",
+        "\n",
+        "    return fitness, sum_dist, sum_pobl\n"
+      ],
+      "execution_count": 163,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "Xw6sR4v7k-Ii"
+      },
+      "source": [
+        "### Funcion para evaluar una población de individuos "
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "Pqtbl-Zlk-Ij"
+      },
+      "source": [
+        "def evaluate_population(population, items, max_sm):\n",
+        "    \"\"\" Evalua una poblacion de individuos con la funcion get_fitness \"\"\"\n",
+        "    popsize = len(population)\n",
+        "    for i in range(popsize):\n",
+        "        if population[i].fitness == -1:    # evalua solo si el individuo no esta evaluado\n",
+        "            population[i].fitness = get_fitness(population[i].chromosome, items, max_sm)[0]\n",
+        "            population[i].sum_dist = get_fitness(population[i].chromosome, items, max_sm)[1]\n",
+        "            population[i].sum_pobl = get_fitness(population[i].chromosome, items, max_sm)[2]"
+      ],
+      "execution_count": 164,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "9IhMfqBDk-It"
+      },
+      "source": [
+        "### Operadores de seleccion de padres"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "s-CL1YssYbD3"
+      },
+      "source": [
+        "#### Seleccion por Ruleta"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "KyRz3__4k-It"
+      },
+      "source": [
+        "def select_parents_roulette(population):\n",
+        "    popsize = len(population)\n",
+        "    \n",
+        "    # Escoje el primer padre\n",
+        "    sumfitness = sum([indiv.fitness for indiv in population])  # suma total del fitness de la poblacion\n",
+        "    pickfitness = random.uniform(0, sumfitness)   # escoge un numero aleatorio entre 0 y sumfitness\n",
+        "    cumfitness = 0     # fitness acumulado\n",
+        "    for i in range(popsize):\n",
+        "        cumfitness += population[i].fitness\n",
+        "        if cumfitness > pickfitness: \n",
+        "            iParent1 = i\n",
+        "            break\n",
+        "    \n",
+        "    # Escoje el segundo padre, desconsiderando el primer padre\n",
+        "    sumfitness = sumfitness - population[iParent1].fitness # retira el fitness del padre ya escogido\n",
+        "    pickfitness = random.uniform(0, sumfitness)   # escoge un numero aleatorio entre 0 y sumfitness\n",
+        "    cumfitness = 0     # fitness acumulado\n",
+        "    for i in range(popsize):\n",
+        "        if i == iParent1: continue   # si es el primer padre \n",
+        "        cumfitness += population[i].fitness\n",
+        "        if cumfitness > pickfitness: \n",
+        "            iParent2 = i\n",
+        "            break        \n",
+        "    return (population[iParent1], population[iParent2])"
+      ],
+      "execution_count": 165,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "DzeuHBHJYbD3"
+      },
+      "source": [
+        "#### Seleccion por Torneo"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "k_CJhyALYbD4"
+      },
+      "source": [
+        "def select_parents_tournament(population, tournament_size):\n",
+        "    # Escoje el primer padre\n",
+        "    list_indiv=[]\n",
+        "    x1 = np.random.permutation(len(population) )\n",
+        "    y1= x1[0:tournament_size]\n",
+        "    for i in range(tournament_size):\n",
+        "        list_indiv.append(population[y1[i]].fitness)\n",
+        "    \n",
+        "    iParent1=np.argmax(list_indiv)\n",
+        "    \n",
+        "    # Escoje el segundo padre, desconsiderando el primer padre   \n",
+        "    x2 = np.delete(x1, iParent1)\n",
+        "    x2 = np.random.permutation(x2)\n",
+        "    list_indiv=[]\n",
+        "    y2= x2[0:tournament_size]\n",
+        "    for i in range(tournament_size):\n",
+        "        list_indiv.append(population[y2[i]].fitness)\n",
+        "    iParent2=np.argmax(list_indiv)\n",
+        "    \n",
+        "    return (population[x1[iParent1]],population[x2[iParent2]])"
+      ],
+      "execution_count": 166,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "KYi2oQPtYbD4"
+      },
+      "source": [
+        "### Operadores de Seleccion de sobrevivientes\n"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "e8CZqrC4k-Ix"
+      },
+      "source": [
+        "#### Función de selección de la poblacion para la sgte generación por ranking\n",
+        "Selecciona la población siguiente ranqueando los individuos de la poblacion actual (population) y la poblacion descendencia (offspring_population) y escogiendo los mejores numsurvivors  individuos "
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "Ua4QyA9hk-Ix"
+      },
+      "source": [
+        "def select_survivors_ranking(population, offspring_population, numsurvivors):\n",
+        "    next_population = []\n",
+        "    population.extend(offspring_population) # une las dos poblaciones\n",
+        "    isurvivors = sorted(range(len(population)), key=lambda i: population[i].fitness, reverse=True)[:numsurvivors]\n",
+        "    for i in range(numsurvivors):\n",
+        "        next_population.append(population[isurvivors[i]])\n",
+        "    return next_population"
+      ],
+      "execution_count": 167,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "akvirSobk-I2"
+      },
+      "source": [
+        "### Algoritmo Genetico para encontrar soluciones al problema de supermercados\n",
+        " "
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "s_rCJHyMk-I4"
+      },
+      "source": [
+        "def genetic_algorithm(population, items, ngen=100, pmut=0.1, max_sm=10, \n",
+        "                      crossover=\"uniform\", mutation=\"flip\", \n",
+        "                      selection_parents_method=\"roulette\", \n",
+        "                      selection_survivors_method=\"ranking\"):\n",
+        "    \"\"\"Algoritmo Genetico para el problema de la mochila\n",
+        "        items:      pool de items a escoger para la mochila. \n",
+        "                    Debe ser una lista de objetos de clase Item\n",
+        "        max_weight: maximo peso que puede soportar la mochila\n",
+        "        ngen:       maximo numero de generaciones \n",
+        "        pmut:       tasa de mutacion\n",
+        "        crossover:  operador de cruzamiento\n",
+        "        mutation:   operador de mutacion\n",
+        "        selection_parents_method: método de selección de padres para cruzamiento\n",
+        "        selection_survivors_method: método de selección de sobrevivientes \n",
+        "    \"\"\"\n",
+        "    \n",
+        "    popsize = len(population)\n",
+        "    evaluate_population(population, items, max_sm)  # evalua la poblacion inicial\n",
+        "    ibest = sorted(range(len(population)), key=lambda i: population[i].fitness, reverse=True)[:1]  # mejor individuo\n",
+        "    bestfitness = [population[ibest[0]].fitness]  # fitness del mejor individuo\n",
+        "    bestsum_dist = [population[ibest[0]].sum_dist] \n",
+        "    bestsum_pobl = [population[ibest[0]].sum_pobl] \n",
+        "    print(\"Poblacion inicial, best_fitness = {}\".format(population[ibest[0]].fitness), \n",
+        "                              \"bestsum_dist = {}\".format(population[ibest[0]].sum_dist),\n",
+        "                              \"bestsum_pobl = {}\".format(population[ibest[0]].sum_pobl),)\n",
+        "    \n",
+        "    for g in range(ngen):   # Por cada generacion\n",
+        "\n",
+        "        ## Selecciona parejas de individuos (mating_pool) para cruzamiento con el metodo de la ruleta\n",
+        "        mating_pool = []\n",
+        "        for i in range(int(popsize/2)):\n",
+        "            if selection_parents_method == \"roulette\":\n",
+        "                mating_pool.append(select_parents_roulette(population))\n",
+        "            elif selection_parents_method == \"tournament\":\n",
+        "                mating_pool.append(select_parents_tournament(population, 3))\n",
+        "            else:\n",
+        "                raise NotImplementedError\n",
+        "        ## Crea la poblacion descendencia cruzando las parejas del mating pool \n",
+        "        offspring_population = []\n",
+        "        for i in range(len(mating_pool)): \n",
+        "            if crossover == \"onepoint\":\n",
+        "                offspring_population.extend( mating_pool[i][0].crossover_onepoint(mating_pool[i][1]) ) # cruzamiento 1 punto\n",
+        "            elif crossover == \"uniform\":\n",
+        "                offspring_population.extend( mating_pool[i][0].crossover_uniform(mating_pool[i][1]) ) # cruzamiento uniforme\n",
+        "            else:\n",
+        "                raise NotImplementedError\n",
+        "\n",
+        "        ## Aplica el operador de mutacion con probabilidad pmut en cada hijo generado\n",
+        "        for i in range(len(offspring_population)):\n",
+        "            if random.uniform(0, 1) < pmut: \n",
+        "                if mutation == \"flip\":\n",
+        "                    offspring_population[i] = offspring_population[i].mutation_flip() # cambia el alelo de un gen\n",
+        "                # elif mutation == \"inversion\":\n",
+        "                #     offspring_population[i] = offspring_population[i].mutation_inversion() # invierte todos los genes entre 2 puntos al azar\n",
+        "                elif mutation == \"multiflip\":\n",
+        "                    offspring_population[i] = offspring_population[i].mutation_multiflip()\n",
+        "                else:\n",
+        "                    raise NotImplementedError   \n",
+        "        \n",
+        "        ## Evalua la poblacion descendencia creada\n",
+        "        evaluate_population(offspring_population, items, max_sm)   # evalua la poblacion descendencia\n",
+        "        \n",
+        "        ## Selecciona individuos para la sgte. generación \n",
+        "        if selection_survivors_method == \"ranking\":\n",
+        "            population = select_survivors_ranking(population, offspring_population, popsize) #metodo de ranking\n",
+        "        else:\n",
+        "            raise NotImplementedError\n",
+        "            \n",
+        "        ## Almacena la historia del fitness del mejor individuo\n",
+        "        ibest = sorted(range(len(population)), key=lambda i: population[i].fitness, reverse=True)[:1]\n",
+        "        bestfitness.append(population[ibest[0]].fitness)\n",
+        "        bestsum_dist.append(population[ibest[0]].sum_dist)\n",
+        "        bestsum_pobl.append(population[ibest[0]].sum_pobl)\n",
+        "        \n",
+        "        if (g % 10 == 0):  # muestra resultados cada 10 generaciones\n",
+        "            print(\"generacion {}, (Mejor fitness = {}), (Mejor dist = {}), (Mejor pobl = {})\".format(g, population[ibest[0]].fitness, population[ibest[0]].sum_dist, population[ibest[0]].sum_pobl))\n",
+        "\n",
+        "    print(\"Mejor individuo en la ultima generacion = {} (fitness = {})\".format(population[ibest[0]].chromosome, population[ibest[0]].fitness))\n",
+        "    return population[ibest[0]], bestfitness  # devuelve el mejor individuo y la lista de mejores fitness x gen"
+      ],
+      "execution_count": 168,
+      "outputs": []
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "UBJge-E7k-I8"
+      },
+      "source": [
+        " ## Probando el Algoritmo genetico"
+      ]
+    },
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "nZjT-jl-YbD7"
+      },
+      "source": [
+        "<b> Ejecuta el algoritmo genetico </b>"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 1000
+        },
+        "id": "6F7Maha9dJYl",
+        "outputId": "192dea31-8625-4e5f-fdf9-661d05069dce"
+      },
+      "source": [
+        "## Hiperparametros del algoritmo genetico  \n",
+        "NUM_ITEMS = 60        # numero de items\n",
+        "POPSIZE = 100       # numero de individuos\n",
+        "GENERATIONS = 500   # numero de generaciones\n",
+        "PMUT = 0.1       # taza de mutacion\n",
+        "MAX_SM = 10  \n",
+        "\n",
+        "## Inicializa una poblacion inicial de forma aleatoria\n",
+        "population = init_population(POPSIZE, NUM_ITEMS)\n",
+        "# Evolue la poblacion con el algoritmo genetico (cruzamiento 'uniform')\n",
+        "best_ind, bestfitness = genetic_algorithm(population, ItemPool, ngen=GENERATIONS, pmut=PMUT , max_sm=MAX_SM,\n",
+        "                                          crossover=\"uniform\", mutation=\"flip\", \n",
+        "                                          selection_parents_method = 'roulette', \n",
+        "                                          selection_survivors_method = 'ranking')\n",
+        "\n",
+        "# muestra la evolucion del mejor fitness\n",
+        "plt.plot(bestfitness)\n",
+        "plt.show()\n"
+      ],
+      "execution_count": 170,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "text": [
+            "Poblacion inicial, best_fitness = 648593.762011827 bestsum_dist = 519393.762011827 bestsum_pobl = 129200\n",
+            "generacion 0, (Mejor fitness = 648593.762011827), (Mejor dist = 519393.762011827), (Mejor pobl = 129200)\n",
+            "generacion 10, (Mejor fitness = 648790.4838783249), (Mejor dist = 511690.48387832486), (Mejor pobl = 137100)\n",
+            "generacion 20, (Mejor fitness = 682554.2209440197), (Mejor dist = 560654.2209440197), (Mejor pobl = 121900)\n",
+            "generacion 30, (Mejor fitness = 682554.2209440197), (Mejor dist = 560654.2209440197), (Mejor pobl = 121900)\n",
+            "generacion 40, (Mejor fitness = 684180.7634701306), (Mejor dist = 556380.7634701306), (Mejor pobl = 127800)\n",
+            "generacion 50, (Mejor fitness = 684704.3660872404), (Mejor dist = 565804.3660872404), (Mejor pobl = 118900)\n",
+            "generacion 60, (Mejor fitness = 685540.3067346623), (Mejor dist = 556340.3067346623), (Mejor pobl = 129200)\n",
+            "generacion 70, (Mejor fitness = 685546.0615838572), (Mejor dist = 556646.0615838572), (Mejor pobl = 128900)\n",
+            "generacion 80, (Mejor fitness = 685821.6865321688), (Mejor dist = 557121.6865321688), (Mejor pobl = 128700)\n",
+            "generacion 90, (Mejor fitness = 685821.6865321688), (Mejor dist = 557121.6865321688), (Mejor pobl = 128700)\n",
+            "generacion 100, (Mejor fitness = 685821.6865321688), (Mejor dist = 557121.6865321688), (Mejor pobl = 128700)\n",
+            "generacion 110, (Mejor fitness = 685821.6865321688), (Mejor dist = 557121.6865321688), (Mejor pobl = 128700)\n",
+            "generacion 120, (Mejor fitness = 685821.6865321688), (Mejor dist = 557121.6865321688), (Mejor pobl = 128700)\n",
+            "generacion 130, (Mejor fitness = 685821.6865321688), (Mejor dist = 557121.6865321688), (Mejor pobl = 128700)\n",
+            "generacion 140, (Mejor fitness = 685821.6865321688), (Mejor dist = 557121.6865321688), (Mejor pobl = 128700)\n",
+            "generacion 150, (Mejor fitness = 685821.6865321688), (Mejor dist = 557121.6865321688), (Mejor pobl = 128700)\n",
+            "generacion 160, (Mejor fitness = 685821.6865321688), (Mejor dist = 557121.6865321688), (Mejor pobl = 128700)\n",
+            "generacion 170, (Mejor fitness = 685821.6865321688), (Mejor dist = 557121.6865321688), (Mejor pobl = 128700)\n",
+            "generacion 180, (Mejor fitness = 685821.6865321688), (Mejor dist = 557121.6865321688), (Mejor pobl = 128700)\n",
+            "generacion 190, (Mejor fitness = 685821.6865321688), (Mejor dist = 557121.6865321688), (Mejor pobl = 128700)\n",
+            "generacion 200, (Mejor fitness = 685821.6865321688), (Mejor dist = 557121.6865321688), (Mejor pobl = 128700)\n",
+            "generacion 210, (Mejor fitness = 685821.6865321688), (Mejor dist = 557121.6865321688), (Mejor pobl = 128700)\n",
+            "generacion 220, (Mejor fitness = 685821.6865321688), (Mejor dist = 557121.6865321688), (Mejor pobl = 128700)\n",
+            "generacion 230, (Mejor fitness = 685821.6865321688), (Mejor dist = 557121.6865321688), (Mejor pobl = 128700)\n",
+            "generacion 240, (Mejor fitness = 685821.6865321688), (Mejor dist = 557121.6865321688), (Mejor pobl = 128700)\n",
+            "generacion 250, (Mejor fitness = 685821.6865321688), (Mejor dist = 557121.6865321688), (Mejor pobl = 128700)\n",
+            "generacion 260, (Mejor fitness = 685821.6865321688), (Mejor dist = 557121.6865321688), (Mejor pobl = 128700)\n",
+            "generacion 270, (Mejor fitness = 685821.6865321688), (Mejor dist = 557121.6865321688), (Mejor pobl = 128700)\n",
+            "generacion 280, (Mejor fitness = 685821.6865321688), (Mejor dist = 557121.6865321688), (Mejor pobl = 128700)\n",
+            "generacion 290, (Mejor fitness = 685821.6865321688), (Mejor dist = 557121.6865321688), (Mejor pobl = 128700)\n",
+            "generacion 300, (Mejor fitness = 685821.6865321688), (Mejor dist = 557121.6865321688), (Mejor pobl = 128700)\n",
+            "generacion 310, (Mejor fitness = 685821.6865321688), (Mejor dist = 557121.6865321688), (Mejor pobl = 128700)\n",
+            "generacion 320, (Mejor fitness = 685821.6865321688), (Mejor dist = 557121.6865321688), (Mejor pobl = 128700)\n",
+            "generacion 330, (Mejor fitness = 685821.6865321688), (Mejor dist = 557121.6865321688), (Mejor pobl = 128700)\n",
+            "generacion 340, (Mejor fitness = 685821.6865321688), (Mejor dist = 557121.6865321688), (Mejor pobl = 128700)\n",
+            "generacion 350, (Mejor fitness = 685821.6865321688), (Mejor dist = 557121.6865321688), (Mejor pobl = 128700)\n",
+            "generacion 360, (Mejor fitness = 685821.6865321688), (Mejor dist = 557121.6865321688), (Mejor pobl = 128700)\n",
+            "generacion 370, (Mejor fitness = 685821.6865321688), (Mejor dist = 557121.6865321688), (Mejor pobl = 128700)\n",
+            "generacion 380, (Mejor fitness = 685821.6865321688), (Mejor dist = 557121.6865321688), (Mejor pobl = 128700)\n",
+            "generacion 390, (Mejor fitness = 685821.6865321688), (Mejor dist = 557121.6865321688), (Mejor pobl = 128700)\n",
+            "generacion 400, (Mejor fitness = 685821.6865321688), (Mejor dist = 557121.6865321688), (Mejor pobl = 128700)\n",
+            "generacion 410, (Mejor fitness = 685821.6865321688), (Mejor dist = 557121.6865321688), (Mejor pobl = 128700)\n",
+            "generacion 420, (Mejor fitness = 685821.6865321688), (Mejor dist = 557121.6865321688), (Mejor pobl = 128700)\n",
+            "generacion 430, (Mejor fitness = 685821.6865321688), (Mejor dist = 557121.6865321688), (Mejor pobl = 128700)\n",
+            "generacion 440, (Mejor fitness = 685821.6865321688), (Mejor dist = 557121.6865321688), (Mejor pobl = 128700)\n",
+            "generacion 450, (Mejor fitness = 685821.6865321688), (Mejor dist = 557121.6865321688), (Mejor pobl = 128700)\n",
+            "generacion 460, (Mejor fitness = 685821.6865321688), (Mejor dist = 557121.6865321688), (Mejor pobl = 128700)\n",
+            "generacion 470, (Mejor fitness = 685821.6865321688), (Mejor dist = 557121.6865321688), (Mejor pobl = 128700)\n",
+            "generacion 480, (Mejor fitness = 685821.6865321688), (Mejor dist = 557121.6865321688), (Mejor pobl = 128700)\n",
+            "generacion 490, (Mejor fitness = 685821.6865321688), (Mejor dist = 557121.6865321688), (Mejor pobl = 128700)\n",
+            "Mejor individuo en la ultima generacion = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0] (fitness = 685821.6865321688)\n"
+          ],
+          "name": "stdout"
+        },
+        {
+          "output_type": "display_data",
+          "data": {
+            "image/png": "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\n",
+            "text/plain": [
+              "<Figure size 432x288 with 1 Axes>"
+            ]
+          },
+          "metadata": {
+            "tags": [],
+            "needs_background": "light"
+          }
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "ao8DPMnKFYfj",
+        "outputId": "eaea5d44-9c62-4b76-b17a-72de7666f391"
+      },
+      "source": [
+        "print(bestfitness)"
+      ],
+      "execution_count": 94,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "text": [
+            "[654238.3608246518, 654238.3608246518, 654238.3608246518, 654238.3608246518, 654238.3608246518, 654238.3608246518, 654238.3608246518, 654238.3608246518, 654238.3608246518, 654238.3608246518, 659582.9773064753, 659582.9773064753, 659582.9773064753, 659582.9773064753, 659582.9773064753, 659582.9773064753, 670324.6786768566, 670561.7132868699, 670561.7132868699, 670561.7132868699, 670561.7132868699, 670561.7132868699, 671984.951193066, 671984.951193066, 677355.2023439879, 678016.5640308966, 678016.5640308966, 678016.5640308966, 678016.5640308966, 678016.5640308966, 678016.5640308966, 678016.5640308966, 678016.5640308966, 678016.5640308966, 678771.5763263336, 680661.1535073222, 680661.1535073222, 680661.1535073222, 680661.1535073222, 680661.1535073222, 680661.1535073222, 680661.1535073222, 680722.2916595084, 680722.2916595084, 680722.2916595084, 680722.2916595084, 680722.2916595084, 680722.2916595084, 681892.889174177, 681892.889174177, 681892.889174177, 681892.889174177, 681892.889174177, 681892.889174177, 681892.889174177, 681892.889174177, 681892.889174177, 682251.9548915632, 682251.9548915632, 682251.9548915632, 682251.9548915632, 682251.9548915632, 682251.9548915632, 682251.9548915632, 682620.830472758, 683244.9632393989, 683244.9632393989, 683244.9632393989, 683244.9632393989, 683244.9632393989, 683244.9632393989, 683244.9632393989, 683244.9632393989, 683244.9632393989, 683244.9632393989, 683244.9632393989, 683244.9632393989, 683244.9632393989, 683244.9632393989, 683244.9632393989, 683322.882226387, 683590.4239415617, 683735.9599365982, 683735.9599365982, 684111.4540524258, 684111.4540524258, 684111.4540524258, 684111.4540524258, 684111.4540524258, 684390.945190657, 684390.945190657, 685195.4649187622, 685195.4649187622, 685195.4649187622, 685195.4649187622, 685195.4649187622, 685195.4649187622, 685195.4649187622, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501, 685339.4546782501]\n"
+          ],
+          "name": "stdout"
+        }
+      ]
+    }
+  ]
+}
